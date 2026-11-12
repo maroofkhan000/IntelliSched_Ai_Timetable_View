@@ -54,20 +54,26 @@ If the main API fails or rejects the key, the visitor still gets the saved copy 
 ```mermaid
 flowchart TD
     H[Home] --> R[Choose your role]
-    R -->|Student| S[Choose your section]
-    R -->|Teacher| T[Enter Teacher ID]
-    T -->|Not on the timetable| E[Error message] --> T
+    R -->|Student| S[Enrollment number and password]
+    R -->|Teacher| T[Teacher ID and password]
     T -->|Use the master account| M[Master ID and password]
-    M -->|Wrong| ME[Error message] --> M
-    M -->|Checked by the server| Dash
-    S --> Dash[Dashboard]
-    T -->|Found| Dash
-    Dash <--> TT[Timetable<br/>class view or list view]
+    S & T & M -->|Wrong| E[Error message<br/>locked for 15 minutes after five]
+    S & T & M -->|Checked by the server| Dash[Dashboard]
+    Dash <--> TT[Timetable<br/>class view, list view, Download PDF]
     Dash --> Out[Sign out] --> H
     TT --> Out
+    M -.->|Master account only| Acc[Accounts<br/>create, reset, delete]
 ```
 
-The choice is remembered in the browser, so returning visitors can go straight to `#/dashboard`. If that person is no longer on the timetable, they're sent back to choose a role. The master account sees the same pages, with a bar on top for switching between any teacher or section.
+The sign-in token is remembered in the browser for 7 days, so returning visitors can go straight to `#/dashboard`. When it expires, or the master account resets the password or deletes the account, they're sent back to choose a role. The master account sees the same pages, with a bar on top for switching between any teacher or section, plus the Accounts page.
+
+## 3a. Creating a login
+
+1. The master account opens Accounts and picks Students or Teachers.
+2. For a student, it enters the enrollment number and sets a password. For a teacher, it chooses the teacher from the timetables, whose Teacher ID becomes the login, and sets a password.
+3. The server stores a hash of the password.
+4. The master account passes the password on. It can't be shown again, only reset.
+5. The first time a student signs in, they choose their section once, and it's saved to their account.
 
 ## 4. Building the display
 

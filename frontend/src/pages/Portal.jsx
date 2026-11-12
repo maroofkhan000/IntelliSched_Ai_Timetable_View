@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react'
-import { Book, Calendar, Clock, Exit, Home, People } from '../Icons'
+import { downloadTimetable } from '../download'
+import { Book, Calendar, Clock, Download, Exit, Home, People, Shield } from '../Icons'
 import { ROLES, blocksFor, choices, isCurrent, nowOrNext, timeOf, todayName, toneOf, weekStats } from '../timetable'
+import Accounts from './Accounts'
 import { Brand, LoadProblem } from './Shared'
 
 const NAV = [
   { route: '/dashboard', label: 'Dashboard', Icon: Home },
   { route: '/timetable', label: 'Timetable', Icon: Calendar },
 ]
+const MASTER_NAV = [...NAV, { route: '/accounts', label: 'Accounts', Icon: Shield }]
 
 export default function Portal({ route, state, session, person, now, onRetry, onTimetable, onSignOut }) {
-  const page = route === '/timetable' ? '/timetable' : '/dashboard'
+  const nav = session.role === 'master' ? MASTER_NAV : NAV
+  const page = nav.some((n) => n.route === route) ? route : '/dashboard'
   const ready = state.status === 'ready'
   const initial = (person?.label ?? '?').replace(/^(Dr|Prof|Mr|Mrs|Ms)\.?\s+/i, '')[0]
 
@@ -18,19 +22,21 @@ export default function Portal({ route, state, session, person, now, onRetry, on
       <aside className="sidebar">
         <Brand />
         <nav aria-label="Main">
-          {NAV.map(({ route: r, label, Icon }) => (
+          {nav.map(({ route: r, label, Icon }) => (
             <a key={r} href={`#${r}`} aria-current={page === r ? 'page' : undefined}><Icon size={19} /> {label}</a>
           ))}
         </nav>
         <div className="me">
           <span className="avatar">{initial}</span>
-          <div className="me-text"><b>{person?.label}</b><span>{session?.role === 'master' ? 'All timetables' : session?.role === 'teacher' ? 'Teacher' : 'Student'}</span></div>
+          <div className="me-text"><b>{person?.label}</b><span>{session.role === 'master' ? 'All timetables' : session.role === 'teacher' ? 'Teacher' : session.target}</span></div>
           <button type="button" className="icon-btn" onClick={onSignOut} aria-label="Sign out" title="Sign out"><Exit size={19} /></button>
         </div>
       </aside>
 
       <main className="content">
-        {ready ? <Page {...{ page, state, session, now, onTimetable }} /> : <LoadProblem status={state.status} onRetry={onRetry} />}
+        {page === '/accounts'
+          ? <Accounts token={session.token} />
+          : ready ? <Page {...{ page, state, session, now, onTimetable }} /> : <LoadProblem status={state.status} onRetry={onRetry} />}
       </main>
     </div>
   )
@@ -43,8 +49,9 @@ function Page({ page, state, session, now, onTimetable }) {
   const [viewing, setViewing] = useState({ role: 'teacher', id: '' })
   const role = isMaster ? viewing.role : session.role
   const options = useMemo(() => (isMaster ? choices(timetable, role) : []), [isMaster, timetable, role])
-  const id = isMaster ? (options.find((o) => o.value === viewing.id) ?? options[0])?.value : session.id
+  const id = isMaster ? (options.find((o) => o.value === viewing.id) ?? options[0])?.value : session.target
   const byDay = useMemo(() => blocksFor(timetable, role, id), [timetable, role, id])
+  const who = choices(timetable, role).find((o) => o.value === id)?.label ?? id
   const published = new Date(timetable.generatedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
   return (
@@ -69,7 +76,7 @@ function Page({ page, state, session, now, onTimetable }) {
         </div>
       )}
       {page === '/timetable'
-        ? <TimetablePage timetable={timetable} byDay={byDay} role={role} now={now} />
+        ? <TimetablePage timetable={timetable} byDay={byDay} role={role} who={who} now={now} />
         : <Dashboard timetable={timetable} byDay={byDay} role={role} now={now} />}
       <footer className="published">
         <p>Published {published}</p>
@@ -132,8 +139,21 @@ function Status({ timetable, byDay, now }) {
   return <p className="banner"><Clock size={20} /> {s.current ? `On now: ${SubjectName} in ${RoomID} until ${s.end}` : `Next: ${SubjectName} in ${RoomID}, ${s.later} at ${s.start}`}</p>
 }
 
-function TimetablePage({ timetable, byDay, role, now }) {
+function TimetablePage({ timetable, byDay, role, who, now }) {
   const [view, setView] = useState('class')
+  const [download, setDownload] = useState('idle')
+
+  const save = async () => {
+    setDownload('busy')
+    try {
+      await downloadTimetable({ timetable, byDay, role, who })
+      setDownload('idle')
+    } catch (err) {
+      console.error('PDF download failed:', err)
+      setDownload('failed')
+    }
+  }
+
   return (
     <>
       <div className="page-head">
@@ -141,8 +161,9 @@ function TimetablePage({ timetable, byDay, role, now }) {
           <h1>Timetable</h1>
           <p className="muted">Your full week</p>
         </div>
-        <button type="button" className="btn ghost print-btn" onClick={() => window.print()}>Print</button>
+        <button type="button" className="btn ghost download-btn" onClick={save} disabled={download === 'busy'}><Download size={18} /> {download === 'busy' ? 'Preparing' : 'Download PDF'}</button>
       </div>
+      {download === 'failed' && <p className="form-error" role="alert">The download didn't work. Reload the page, then try again.</p>}
       <section className="panel">
         <div className="tabs" role="group" aria-label="Timetable view">
           <button type="button" aria-pressed={view === 'class'} onClick={() => setView('class')}>Class view</button>

@@ -1,6 +1,6 @@
 # IntelliSched AI (view site)
 
-A read-only website where students and teachers look up their timetable. Students choose their section and teachers enter their Teacher ID; there are no accounts or passwords.
+A website where students and teachers sign in to see their timetable and download it as a PDF. The master account creates their logins on the Accounts page: students use their enrollment number and teachers their Teacher ID, each with a password. Nobody can sign in until the master account has created a login for them.
 
 More detail: [DECISIONS.md](DECISIONS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [FLOW.md](FLOW.md) and [REFERENCE.md](REFERENCE.md).
 
@@ -9,7 +9,7 @@ IntelliSched backend (ProjectSection)
         |  GET /api/public/timetables, with the API key
         v
 View backend (this folder, port 4100)  <-->  its own MongoDB copy
-        |  GET /api/timetables
+        |  GET /api/timetables, after sign-in
         v
 View frontend (port 5180)
 ```
