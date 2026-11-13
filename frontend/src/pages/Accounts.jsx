@@ -91,6 +91,14 @@ function NewAccount({ role, data, token, onSaved }) {
           <label className="field"><span>Enrollment number</span>
             <input value={id} onChange={(e) => setId(e.target.value)} placeholder="For example 2300101892" inputMode="numeric" autoComplete="off" required />
           </label>
+        ) : null}
+        {isStudent ? (
+          <label className="field"><span>Section</span>
+            <select value={target} onChange={(e) => setTarget(e.target.value)}>
+              <option value="">Student chooses at first sign-in</option>
+              {data.sections.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
         ) : (
           <label className="field"><span>Teacher</span>
             <select value={target} onChange={(e) => setTarget(e.target.value)} required>

@@ -115,8 +115,10 @@ app.post('/api/accounts', wrap(async (req, res) => {
   const loginId = role === 'teacher' ? cleanId(target) : cleanId(id)
   if (!LOGIN_ID.test(loginId)) return fail(res, 400, 'IDs are 3 to 32 letters, digits or hyphens.')
   if (!okPassword(password)) return fail(res, 400, BAD_PASSWORD)
-  if (role === 'teacher' && !(await people()).teachers.some((t) => t.id === target)) return fail(res, 400, "That teacher isn't on any timetable.")
-  const linked = role === 'teacher' ? target : null // students choose their section at first sign-in
+  const known = await people()
+  if (role === 'teacher' && !known.teachers.some((t) => t.id === target)) return fail(res, 400, "That teacher isn't on any timetable.")
+  if (role === 'student' && target && !known.sections.includes(target)) return fail(res, 400, "That section isn't on any timetable.")
+  const linked = target || null // a student without a section chooses it at first sign-in
   try {
     await store.accounts.insertOne({ _id: accountId(role, loginId), role, loginId, target: linked, passwordHash: await hashPassword(password), createdAt: new Date() })
   } catch (err) {
