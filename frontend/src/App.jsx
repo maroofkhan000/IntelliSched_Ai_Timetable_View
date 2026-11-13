@@ -78,8 +78,8 @@ export default function App() {
     go('/')
   }
 
-  if (route === '/') return <Landing />
-  if (route === '/role' || route.startsWith('/sign-in')) return <Access route={route} onSignIn={signIn} />
+  if (route === '/' || route === '/role') return <Landing />
+  if (route.startsWith('/sign-in')) return <Access route={route} onSignIn={signIn} />
 
   if (!session) {
     go('/role')

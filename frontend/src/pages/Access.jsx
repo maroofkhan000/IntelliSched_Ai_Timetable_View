@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { Arrow, Cap, People } from '../Icons'
-import { Brand, Leaves } from './Shared'
-
-const ROLE_CARDS = [
-  { role: 'student', Icon: Cap, title: 'I am a student', text: 'See your class timetable and what comes next.' },
-  { role: 'teacher', Icon: People, title: 'I am a teacher', text: 'See the classes and rooms you teach this week.' },
-]
+import { Arrow, ArrowLeft, Board, BookOpen, Cap, CalendarDots, Group, Sliders, Trend } from '../Icons'
+import { Scenery, StudentArt, TeacherArt } from './Illustrations'
+import { SiteBrand, ThemeButton } from './Shared'
 
 const ID_FIELD = {
   student: { label: 'Enrollment number', placeholder: 'For example 2300101892', inputMode: 'numeric' },
@@ -15,21 +11,55 @@ const ID_FIELD = {
 }
 
 export default function Access({ route, onSignIn }) {
-  if (route === '/role') return <ChooseRole />
   const role = route.endsWith('/master') ? 'master' : route.endsWith('/teacher') ? 'teacher' : 'student'
+  const tone = role === 'student' ? 'student' : 'teacher'
   return (
-    <div className="access">
-      <Leaves />
-      <main className="sign-in">
-        <Brand />
-        <h1>Welcome back</h1>
-        <p className="muted">Sign in to see your timetable</p>
-        <div className="role-tabs" role="group" aria-label="Sign in as">
-          <a href="#/sign-in/student" aria-current={role === 'student' ? 'true' : undefined}><Cap size={18} /> Student</a>
-          <a href="#/sign-in/teacher" aria-current={role !== 'student' ? 'true' : undefined}><People size={18} /> Teacher</a>
-        </div>
-        <SignInForm key={role} role={role} onSignIn={onSignIn} />
-      </main>
+    <AuthShell tone={tone} title={<>Welcome <em>back</em></>} text="Sign in to see your timetable">
+      <div className="auth-tabs" role="group" aria-label="Sign in as">
+        <a href="#/sign-in/student" aria-current={role === 'student' ? 'true' : undefined}><Cap size={18} /> Student</a>
+        <a href="#/sign-in/teacher" aria-current={role !== 'student' ? 'true' : undefined}><Board size={18} /> Teacher</a>
+      </div>
+      <SignInForm key={role} role={role} onSignIn={onSignIn} />
+    </AuthShell>
+  )
+}
+
+const ART = {
+  student: { Art: StudentArt, heading: 'Your classes, rooms and teachers for the whole week.', perks: [[CalendarDots, 'My Timetable'], [Trend, 'Class Updates'], [BookOpen, 'Study Planner']] },
+  teacher: { Art: TeacherArt, heading: 'Your teaching schedule, sections and rooms in one place.', perks: [[CalendarDots, 'Teaching Schedule'], [Group, 'Class & Room Allocation'], [Sliders, 'Scheduling Preferences']] },
+}
+
+// The role page's sky and header around a two-panel card: artwork on one side, the form on the other.
+function AuthShell({ tone, title, text, children }) {
+  const { Art, heading, perks } = ART[tone]
+  return (
+    <div className="role-page">
+      <div className="rp-hero">
+        <Scenery />
+        <header className="rp-nav">
+          <SiteBrand />
+          <div className="rp-actions">
+            <ThemeButton />
+            <a className="rp-back" href="#/role"><ArrowLeft size={18} /> All roles</a>
+          </div>
+        </header>
+        <main className="auth-main">
+          <section className={`auth-card ${tone}`}>
+            <div className="auth-side" aria-hidden="true">
+              <p>{heading}</p>
+              <ul className="rp-perks">
+                {perks.map(([PerkIcon, label]) => <li key={label}><PerkIcon size={24} />{label}</li>)}
+              </ul>
+              <div className="auth-art"><Art /></div>
+            </div>
+            <div className="auth-body">
+              <h1>{title}</h1>
+              <p className="auth-lead">{text}</p>
+              {children}
+            </div>
+          </section>
+        </main>
+      </div>
     </div>
   )
 }
@@ -62,47 +92,18 @@ export function ChooseSection({ token, onChosen, onExpired }) {
   }
 
   return (
-    <div className="access">
-      <Leaves />
-      <main className="sign-in">
-        <Brand />
-        <h1>Choose your section</h1>
-        <p className="muted">You only need to do this once</p>
-        <form onSubmit={submit}>
-          <label className="field"><span>Section</span>
-            <select value={section} onChange={(e) => setSection(e.target.value)} required>
-              <option value="" disabled>{sections ? 'Choose your section' : 'Loading'}</option>
-              {sections?.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <button type="submit" className="btn primary wide" disabled={busy}>Continue <Arrow size={18} /></button>
-        </form>
-      </main>
-    </div>
-  )
-}
-
-function ChooseRole() {
-  return (
-    <div className="access">
-      <Leaves />
-      <main className="choose">
-        <Brand />
-        <h1>Choose your role</h1>
-        <p className="muted">Get a timetable made for how you use it</p>
-        <div className="role-cards">
-          {ROLE_CARDS.map(({ role, Icon, title, text }) => (
-            <a key={role} href={`#/sign-in/${role}`}>
-              <span className="soft-icon big"><Icon size={44} /></span>
-              <h2>{title}</h2>
-              <p>{text}</p>
-              <span className="round-arrow"><Arrow size={20} /></span>
-            </a>
-          ))}
-        </div>
-      </main>
-    </div>
+    <AuthShell tone="student" title={<>Choose your <em>section</em></>} text="You only need to do this once">
+      <form onSubmit={submit}>
+        <label className="field"><span>Section</span>
+          <select value={section} onChange={(e) => setSection(e.target.value)} required>
+            <option value="" disabled>{sections ? 'Choose your section' : 'Loading'}</option>
+            {sections?.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <button type="submit" className="auth-submit" disabled={busy}>Continue <Arrow size={18} /></button>
+      </form>
+    </AuthShell>
   )
 }
 
@@ -134,7 +135,7 @@ function SignInForm({ role, onSignIn }) {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
       </label>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <button type="submit" className="btn primary wide" disabled={busy}>{busy ? 'Signing in' : 'Sign in'} <Arrow size={18} /></button>
+      <button type="submit" className="auth-submit" disabled={busy}>{busy ? 'Signing in' : 'Sign in'} <Arrow size={18} /></button>
       {role === 'teacher' && <a className="form-link" href="#/sign-in/master">Use the master account</a>}
       {role === 'master' && <a className="form-link" href="#/sign-in/teacher">Sign in with a Teacher ID</a>}
     </form>
